@@ -2,16 +2,25 @@
 
 The project goal is to give drivers an easy way to see which roads have been driven.
 
-Minimum Viable Product Features:
---------------------------------
+## Project Goals and Status
+
+**Project status:** Phase 1 in development
+
+### Phase 1 (MVP):
+
 
 * display a map to the user
+* allow the user to select a map area from a list of areas that need to be driven
 * overlay a polygon on the map, highlighting the area that needs to be driven
 * trace the user's position on the map, drawing a line where the user has been
 
+### Phase 2:
 
-Stretch goals and future features:
-----------------------------------
+* allow the user to log in to their OSM account
+* allow the user to mark a map area as complete
+
+
+### Phase 3:
 
 * implement a solution to the [route inspection problem](https://en.wikipedia.org/wiki/Route_inspection_problem)
 (also called Chinese postman problem) to optimize routes, minimizing the amount of time and fuel spent to cover an area
