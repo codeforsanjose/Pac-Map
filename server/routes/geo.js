@@ -1,7 +1,7 @@
 let express = require('express');
 let jsonfile = require('jsonfile');
 let router = express.Router();
-let data = jsonfile.readFileSync('data/working_grouped_tazs.geojson');
+let data = jsonfile.readFileSync(__dirname + '/../data/working_grouped_tazs.geojson');
 
 // GET specific region
 router.get('/:region', function(req, res, next) {
