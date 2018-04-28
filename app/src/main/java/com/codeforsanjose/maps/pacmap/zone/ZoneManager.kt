@@ -1,6 +1,7 @@
 package com.codeforsanjose.maps.pacmap.zone
 
 import android.content.Context
+import android.util.Log
 import com.mapbox.mapboxsdk.Mapbox.getApplicationContext
 import io.reactivex.Completable
 import io.reactivex.Observable
@@ -14,6 +15,7 @@ import retrofit2.converter.moshi.MoshiConverterFactory
 import timber.log.Timber
 import java.io.IOException
 import java.io.InputStream
+import java.nio.charset.StandardCharsets.UTF_8
 
 
 class ZoneManager {
@@ -84,7 +86,7 @@ class ZoneManager {
                 if (response.isSuccessful) {
                     Timber.d("server contacted and has file")
 
-                    val writtenToDisk = writeResponseBodyToDisk(response.body())
+                    val writtenToDisk = writeResponseBodyToAssets(response.body())
 
                     Timber.d("file download was a success? $writtenToDisk")
                 } else {
@@ -96,11 +98,28 @@ class ZoneManager {
             }, { error ->
                 Timber.e(error)
             })
-
-
         }
 
-        private fun writeResponseBodyToDisk(body: ResponseBody?): Boolean {
+        private fun loadFileFromAsset(filename: String): String? {
+            return try {
+                val inputString = getApplicationContext().assets.open(filename)
+                val size = inputString.available()
+                val buffer = ByteArray(size)
+                inputString.read(buffer)
+                inputString.close()
+                String(buffer, UTF_8)
+            } catch (exception: Exception) {
+                Log.e("Exception Loading file from Assets: %s", exception.toString())
+                exception.printStackTrace()
+                null
+            }
+        }
+
+        private fun writeResponseBodyToAssets(body: ResponseBody?): Boolean {
+            if (body == null) {
+                Timber.w("Null response body")
+                return false
+            }
             try {
                 val filename = GEOJSON_FILENAME
                 getApplicationContext().openFileOutput(filename, Context.MODE_PRIVATE).use { outputStream ->
@@ -108,15 +127,13 @@ class ZoneManager {
 
                     try {
                         val fileReader = ByteArray(4096)
-
-                        val fileSize = body?.contentLength()
+                        val fileSize = body.contentLength()
                         var fileSizeDownloaded: Long = 0
 
-                        inputStream = body?.byteStream()
+                        inputStream = body.byteStream()
 
                         while (true) {
                             val read = inputStream!!.read(fileReader)
-
                             if (read == -1) {
                                 break
                             }
@@ -126,9 +143,7 @@ class ZoneManager {
 
                             Timber.d("file download: $fileSizeDownloaded of $fileSize")
                         }
-
                         outputStream.flush()
-
                         return true
                     } catch (e: IOException) {
                         Timber.e(e)
@@ -142,7 +157,6 @@ class ZoneManager {
                 Timber.e(e)
                 return false
             }
-
         }
     }
 }

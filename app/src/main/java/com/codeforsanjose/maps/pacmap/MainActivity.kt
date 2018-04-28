@@ -14,12 +14,16 @@ import com.mapbox.mapboxsdk.Mapbox
 import com.mapbox.mapboxsdk.annotations.PolygonOptions
 import com.mapbox.mapboxsdk.camera.CameraUpdateFactory
 import com.mapbox.mapboxsdk.geometry.LatLng
+import com.mapbox.mapboxsdk.geometry.LatLngBounds
 import com.mapbox.mapboxsdk.maps.MapView
 import com.mapbox.mapboxsdk.maps.MapboxMap
+import com.mapbox.mapboxsdk.maps.MapboxMap.OnMapClickListener
 import com.mapbox.mapboxsdk.maps.OnMapReadyCallback
 import com.mapbox.mapboxsdk.plugins.locationlayer.LocationLayerMode
 import com.mapbox.mapboxsdk.plugins.locationlayer.LocationLayerPlugin
 import com.mapbox.mapboxsdk.style.layers.FillExtrusionLayer
+import com.mapbox.mapboxsdk.style.layers.Filter
+import com.mapbox.mapboxsdk.style.layers.Layer
 import com.mapbox.mapboxsdk.style.layers.PropertyFactory.*
 import com.mapbox.mapboxsdk.style.sources.GeoJsonSource
 import com.mapbox.services.android.telemetry.location.LocationEngine
@@ -29,19 +33,21 @@ import com.mapbox.services.android.telemetry.location.LostLocationEngine
 import com.mapbox.services.android.telemetry.permissions.PermissionsListener
 import com.mapbox.services.android.telemetry.permissions.PermissionsManager
 import com.mapbox.services.commons.geojson.Feature
+import com.mapbox.services.commons.models.Position
+import com.squareup.moshi.Moshi
 import io.reactivex.android.schedulers.AndroidSchedulers
 import io.reactivex.schedulers.Schedulers
 import timber.log.Timber
 import java.net.URL
 
 
-class MainActivity : AppCompatActivity(), OnMapReadyCallback, LocationEngineListener, MapboxMap.OnMapClickListener,
+class MainActivity : AppCompatActivity(), OnMapReadyCallback, LocationEngineListener, OnMapClickListener,
         PermissionsListener {
 
 
     companion object {
-        const val GEO_SOURCE_ID = "1"
-        const val GEO_LAYER_ID = "Layer1"
+        const val GEO_SOURCE_ID = "Source_1"
+        const val GEO_LAYER_ID = "Layer_1"
     }
 
     var permissionsManager: PermissionsManager? = null
@@ -61,7 +67,7 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback, LocationEngineList
 
         setContentView(R.layout.activity_main)
 
-        dlZones()
+        //dlZones()
 
         mapView = findViewById(R.id.mapView)
         mapView.onCreate(savedInstanceState)
@@ -106,7 +112,7 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback, LocationEngineList
             mapboxMap = map
             mapboxMap?.let {
                 it.addOnMapClickListener(this)
-                it.addSource(GeoJsonSource(GEO_SOURCE_ID, URL("https://pac-map.herokuapp.com/geo/")))
+              //  it.addSource(GeoJsonSource(GEO_SOURCE_ID, URL("https://pac-map.herokuapp.com/geo/")))
             }
 
         }
@@ -140,16 +146,19 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback, LocationEngineList
             permissionsManager?.requestLocationPermissions(this)
         }
 
-//        updateZones()
-        addExtrusionsLayerToMap()
+        updateZones()
+       // addExtrusionsLayerToMap()
     }
 
-    private fun addExtrusionsLayerToMap(){
+    private fun addExtrusionsLayerToMap() {
         // Add FillExtrusion layer to map using GeoJSON data
         val courseExtrusionLayer = FillExtrusionLayer(GEO_LAYER_ID, GEO_SOURCE_ID);
         courseExtrusionLayer.setProperties(
-                fillExtrusionColor(Color.YELLOW),
-                fillExtrusionOpacity(0.7f))
+                lineWidth(10f),
+                lineOpacity(0.8f),
+                fillOutlineColor(Color.parseColor("#5e64e5")),
+                fillExtrusionColor(Color.parseColor("#dc6e63")),
+                fillExtrusionOpacity(0.35f))
 
         mapboxMap?.addLayer(courseExtrusionLayer);
     }
@@ -165,10 +174,25 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback, LocationEngineList
             for (feature in featureList) {
                 Timber.d("Feature found with %s", feature.toJson())
 
-                Toast.makeText(this, "polycon clicked?",
+                Toast.makeText(this, "polygon clicked",
                         Toast.LENGTH_SHORT).show()
+                zoomToFeature(feature)
             }
         }
+    }
+
+    private fun zoomToFeature(feature: Feature) {
+        val bounds = LatLngBounds.Builder()
+        val lls = featureToCoords(feature)
+        if (lls.isEmpty()){
+            Timber.e("no coordinates returned. Is this a MultiPolygon?")
+            Toast.makeText(this, "MultiPolygons not yet supported", Toast.LENGTH_LONG).show()
+        }
+        for (ll in lls) {
+            bounds.include(ll)
+        }
+        mapboxMap?.moveCamera(CameraUpdateFactory
+                .newLatLngBounds(bounds.build(), 20))
     }
 
     fun updateZones() {
@@ -186,11 +210,11 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback, LocationEngineList
                             Timber.v("Result : %s", result)
                             zones = result
 
-//                            val moshi =  Moshi.Builder().build()
-//                            val jsonAdapter = moshi.adapter(FeatureCollection::class.java)
-//                            val json = jsonAdapter.toJson(zones);
-//                            val courseRouteGeoJson = GeoJsonSource(GEO_SOURCE_ID, json);
-//                            mapboxMap?.addSource(courseRouteGeoJson)
+                            val moshi =  Moshi.Builder().build()
+                            val jsonAdapter = moshi.adapter(FeatureCollection::class.java)
+                            val json = jsonAdapter.toJson(zones)
+                            mapboxMap?.addSource(GeoJsonSource(GEO_SOURCE_ID, json.toString()))
+                            addExtrusionsLayerToMap()
 
                             //drawPolygons()
                         },
@@ -199,6 +223,39 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback, LocationEngineList
                         })
     }
 
+    private fun featureToCoords(feature: com.codeforsanjose.maps.pacmap.zone.Feature): List<LatLng> {
+        val lls = ArrayList<LatLng>()
+        if (feature.geometry.type == "Polygon") {
+            for (ca in feature.geometry.coordinates) {
+                for (cb in ca) {
+                    lls.add(LatLng(cb[1] as Double, cb[0] as Double))
+                }
+            }
+        } else if (feature.geometry.type == "MultiPolygon") {
+            Timber.w("Found a MultiPolygon in the dataset. Not yet supportted.")
+        }
+        return lls
+    }
+
+    private fun featureToCoords(feature: Feature): List<LatLng> {
+        val lls = ArrayList<LatLng>()
+        if (feature.geometry.type == "Polygon") {
+            if (feature.geometry.coordinates is ArrayList<*>) {
+                for (geomCoord in feature.geometry.coordinates as ArrayList<*>) {
+                    if (geomCoord is ArrayList<*>) {
+                        for (pos in geomCoord) {
+                            if (pos is Position) {
+                                lls.add(LatLng(pos.latitude , pos.longitude))
+                            }
+                        }
+                    }
+                }
+            }
+        } else if (feature.geometry.type == "MultiPolygon") {
+            Timber.w("Found a MultiPolygon in the dataset. Not yet supportted.")
+        }
+        return lls
+    }
 
     private fun drawPolygons() {
         if (polygonList.size > 0) {
@@ -209,17 +266,12 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback, LocationEngineList
         zones?.let {
             var poly: ArrayList<LatLng>
             for (feat in it.features) {
-                if (feat.geometry.type == "Polygon") {
-                    for (ca in feat.geometry.coordinates) {
-                        poly = arrayListOf()
-                        for (cb in ca) {
-                            poly.add(LatLng(cb[1] as Double, cb[0] as Double))
-                        }
-                        polygonList.add(poly)
-                    }
-                } else if (feat.geometry.type == "MultiPolygon") {
-                    Timber.w("Found a MultiPolygon in the dataset. Not yet supportted.")
+                val lls = featureToCoords(feat)
+                poly = arrayListOf()
+                for (ll in lls) {
+                    poly.add(ll)
                 }
+                polygonList.add(poly)
             }
 
         }
@@ -227,7 +279,8 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback, LocationEngineList
         for (p in polygonList) {
             mapboxMap?.addPolygon(PolygonOptions()
                     .addAll(p)
-                    .fillColor(Color.parseColor("#3bb2d0")));
+                    .alpha(0.25f)
+                    .fillColor(Color.parseColor("#3bb2d0")))
         }
     }
 
