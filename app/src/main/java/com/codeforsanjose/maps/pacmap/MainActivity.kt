@@ -2,11 +2,13 @@ package com.codeforsanjose.maps.pacmap
 
 import android.annotation.SuppressLint
 import android.graphics.Color
+import android.graphics.RectF
 import android.location.Location
 import android.os.Bundle
 import android.support.v7.app.AppCompatActivity
 import android.widget.Toast
 import com.codeforsanjose.maps.pacmap.zone.FeatureCollection
+import com.codeforsanjose.maps.pacmap.zone.ZoneManager.Companion.dlZones
 import com.codeforsanjose.maps.pacmap.zone.ZoneManager.Companion.fetchZones
 import com.mapbox.mapboxsdk.Mapbox
 import com.mapbox.mapboxsdk.annotations.PolygonOptions
@@ -17,23 +19,30 @@ import com.mapbox.mapboxsdk.maps.MapboxMap
 import com.mapbox.mapboxsdk.maps.OnMapReadyCallback
 import com.mapbox.mapboxsdk.plugins.locationlayer.LocationLayerMode
 import com.mapbox.mapboxsdk.plugins.locationlayer.LocationLayerPlugin
+import com.mapbox.mapboxsdk.style.layers.FillExtrusionLayer
+import com.mapbox.mapboxsdk.style.layers.PropertyFactory.*
+import com.mapbox.mapboxsdk.style.sources.GeoJsonSource
 import com.mapbox.services.android.telemetry.location.LocationEngine
 import com.mapbox.services.android.telemetry.location.LocationEngineListener
 import com.mapbox.services.android.telemetry.location.LocationEnginePriority
 import com.mapbox.services.android.telemetry.location.LostLocationEngine
 import com.mapbox.services.android.telemetry.permissions.PermissionsListener
 import com.mapbox.services.android.telemetry.permissions.PermissionsManager
-import io.reactivex.Completable
-import io.reactivex.Observable
-import io.reactivex.Single
+import com.mapbox.services.commons.geojson.Feature
 import io.reactivex.android.schedulers.AndroidSchedulers
-import io.reactivex.internal.operators.flowable.FlowableReplay.observeOn
 import io.reactivex.schedulers.Schedulers
 import timber.log.Timber
-import java.util.concurrent.Callable
+import java.net.URL
 
 
-class MainActivity : AppCompatActivity(), OnMapReadyCallback, LocationEngineListener, PermissionsListener {
+class MainActivity : AppCompatActivity(), OnMapReadyCallback, LocationEngineListener, MapboxMap.OnMapClickListener,
+        PermissionsListener {
+
+
+    companion object {
+        const val GEO_SOURCE_ID = "1"
+        const val GEO_LAYER_ID = "Layer1"
+    }
 
     var permissionsManager: PermissionsManager? = null
     var mapboxMap: MapboxMap? = null
@@ -51,6 +60,8 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback, LocationEngineList
         Mapbox.getInstance(this, getString(R.string.access_token))
 
         setContentView(R.layout.activity_main)
+
+        dlZones()
 
         mapView = findViewById(R.id.mapView)
         mapView.onCreate(savedInstanceState)
@@ -93,6 +104,11 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback, LocationEngineList
         if (map != null) {
             Timber.d("Map is ready")
             mapboxMap = map
+            mapboxMap?.let {
+                it.addOnMapClickListener(this)
+                it.addSource(GeoJsonSource(GEO_SOURCE_ID, URL("https://pac-map.herokuapp.com/geo/")))
+            }
+
         }
 
         // Check if permissions are enabled and if not request
@@ -123,7 +139,36 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback, LocationEngineList
             permissionsManager = PermissionsManager(this)
             permissionsManager?.requestLocationPermissions(this)
         }
-        updateZones()
+
+//        updateZones()
+        addExtrusionsLayerToMap()
+    }
+
+    private fun addExtrusionsLayerToMap(){
+        // Add FillExtrusion layer to map using GeoJSON data
+        val courseExtrusionLayer = FillExtrusionLayer(GEO_LAYER_ID, GEO_SOURCE_ID);
+        courseExtrusionLayer.setProperties(
+                fillExtrusionColor(Color.YELLOW),
+                fillExtrusionOpacity(0.7f))
+
+        mapboxMap?.addLayer(courseExtrusionLayer);
+    }
+
+    override fun onMapClick(point: LatLng) {
+        Timber.v("Map was touched at point lat: %s,  lon: %s", point.latitude, point.longitude)
+        mapboxMap?.let { map ->
+            val pointf = map.projection.toScreenLocation(point)
+            val rectF = RectF(pointf.x - 10, pointf.y - 10, pointf.x + 10, pointf.y + 10)
+
+            val featureList = map.queryRenderedFeatures(rectF, GEO_LAYER_ID) as List<Feature>
+
+            for (feature in featureList) {
+                Timber.d("Feature found with %s", feature.toJson())
+
+                Toast.makeText(this, "polycon clicked?",
+                        Toast.LENGTH_SHORT).show()
+            }
+        }
     }
 
     fun updateZones() {
@@ -140,7 +185,14 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback, LocationEngineList
                         { result ->
                             Timber.v("Result : %s", result)
                             zones = result
-                            drawPolygons()
+
+//                            val moshi =  Moshi.Builder().build()
+//                            val jsonAdapter = moshi.adapter(FeatureCollection::class.java)
+//                            val json = jsonAdapter.toJson(zones);
+//                            val courseRouteGeoJson = GeoJsonSource(GEO_SOURCE_ID, json);
+//                            mapboxMap?.addSource(courseRouteGeoJson)
+
+                            //drawPolygons()
                         },
                         { error ->
                             Timber.e(error)
@@ -157,7 +209,7 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback, LocationEngineList
         zones?.let {
             var poly: ArrayList<LatLng>
             for (feat in it.features) {
-                if (feat.geometry.type.equals("Polygon")) {
+                if (feat.geometry.type == "Polygon") {
                     for (ca in feat.geometry.coordinates) {
                         poly = arrayListOf()
                         for (cb in ca) {
@@ -165,6 +217,8 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback, LocationEngineList
                         }
                         polygonList.add(poly)
                     }
+                } else if (feat.geometry.type == "MultiPolygon") {
+                    Timber.w("Found a MultiPolygon in the dataset. Not yet supportted.")
                 }
             }
 
