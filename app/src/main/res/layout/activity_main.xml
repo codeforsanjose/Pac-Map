@@ -1,17 +1,87 @@
 <?xml version="1.0" encoding="utf-8"?>
-<RelativeLayout
+<android.support.constraint.ConstraintLayout
     xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:mapbox="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent">
+
+    <android.support.design.widget.FloatingActionButton
+        android:id="@+id/menuFab"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="16dp"
+        android:layout_marginTop="16dp"
+        android:clickable="true"
+        android:focusable="true"
+        mapbox:layout_constraintStart_toStartOf="parent"
+        mapbox:layout_constraintTop_toTopOf="parent"
+        mapbox:srcCompat="@android:drawable/ic_menu_more"/>
+
+    <android.support.design.widget.FloatingActionButton
+        android:id="@+id/settingsFab"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:clickable="true"
+        android:focusable="true"
+        app:layout_constraintCircle="@+id/menuFab"
+        app:layout_constraintCircleAngle="90"
+        app:layout_constraintCircleRadius="100dp"
+        mapbox:srcCompat="@android:drawable/ic_menu_manage"
+        tools:layout_editor_absoluteX="90dp"/>
+
+    <android.support.design.widget.FloatingActionButton
+        android:id="@+id/liveModeFab"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:clickable="true"
+        android:focusable="true"
+        app:layout_constraintCircle="@+id/menuFab"
+        app:layout_constraintCircleAngle="135"
+        app:layout_constraintCircleRadius="100dp"
+        mapbox:srcCompat="@android:drawable/stat_notify_sdcard"
+        tools:layout_editor_absoluteX="16dp"
+        tools:layout_editor_absoluteY="84dp"/>
+
+    <android.support.design.widget.FloatingActionButton
+        android:id="@+id/localModeFab"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="44dp"
+        android:clickable="true"
+        android:focusable="true"
+        app:layout_constraintCircle="@+id/menuFab"
+        app:layout_constraintCircleAngle="180"
+        app:layout_constraintCircleRadius="100dp"
+        mapbox:srcCompat="@android:drawable/ic_popup_sync"
+        tools:layout_editor_absoluteX="90dp"/>
+
+
+    <Button
+        android:id="@+id/navButton"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignParentBottom="true"
+        android:layout_centerHorizontal="true"
+        android:layout_marginBottom="24dp"
+        android:visibility="gone"
+        android:text="Start Navigation"
+        app:layout_constraintBottom_toBottomOf="@+id/mapView"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"/>
 
     <com.mapbox.mapboxsdk.maps.MapView
         android:id="@+id/mapView"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
         mapbox:mapbox_cameraTargetLat="40.73581"
         mapbox:mapbox_cameraTargetLng="-73.99155"
-        mapbox:mapbox_styleUrl="mapbox://styles/mapbox/streets-v10"
-        mapbox:mapbox_cameraZoom="11" />
+        mapbox:mapbox_cameraZoom="11"
+        mapbox:mapbox_styleUrl="mapbox://styles/mapbox/streets-v10"/>
 
-</RelativeLayout>
+</android.support.constraint.ConstraintLayout>

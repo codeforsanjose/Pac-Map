@@ -1,40 +1,44 @@
 package com.codeforsanjose.maps.pacmap
 
+import android.animation.ObjectAnimator
 import android.annotation.SuppressLint
 import android.graphics.Color
+import android.graphics.Path
 import android.graphics.RectF
 import android.location.Location
 import android.os.Bundle
+import android.support.design.widget.FloatingActionButton
 import android.support.v7.app.AppCompatActivity
+import android.view.View
 import android.widget.Toast
 import com.codeforsanjose.maps.pacmap.zone.FeatureCollection
-import com.codeforsanjose.maps.pacmap.zone.ZoneManager.Companion.dlZones
 import com.codeforsanjose.maps.pacmap.zone.ZoneManager.Companion.fetchZones
+import com.mapbox.android.core.location.LocationEngine
+import com.mapbox.android.core.location.LocationEngineListener
+import com.mapbox.android.core.location.LocationEnginePriority
+import com.mapbox.android.core.location.LocationEngineProvider
+import com.mapbox.android.core.permissions.PermissionsListener
+import com.mapbox.android.core.permissions.PermissionsManager
+import com.mapbox.geojson.Feature
+import com.mapbox.geojson.Polygon
 import com.mapbox.mapboxsdk.Mapbox
 import com.mapbox.mapboxsdk.annotations.PolygonOptions
 import com.mapbox.mapboxsdk.camera.CameraUpdateFactory
+import com.mapbox.mapboxsdk.constants.Style.MAPBOX_STREETS
 import com.mapbox.mapboxsdk.geometry.LatLng
 import com.mapbox.mapboxsdk.geometry.LatLngBounds
 import com.mapbox.mapboxsdk.maps.MapView
 import com.mapbox.mapboxsdk.maps.MapboxMap
 import com.mapbox.mapboxsdk.maps.MapboxMap.OnMapClickListener
 import com.mapbox.mapboxsdk.maps.OnMapReadyCallback
-import com.mapbox.mapboxsdk.plugins.locationlayer.LocationLayerMode
+import com.mapbox.mapboxsdk.plugins.locationlayer.LocationLayerOptions
 import com.mapbox.mapboxsdk.plugins.locationlayer.LocationLayerPlugin
-import com.mapbox.mapboxsdk.style.layers.FillExtrusionLayer
-import com.mapbox.mapboxsdk.style.layers.Filter
-import com.mapbox.mapboxsdk.style.layers.Layer
+import com.mapbox.mapboxsdk.plugins.locationlayer.modes.CameraMode
+import com.mapbox.mapboxsdk.style.layers.FillLayer
+import com.mapbox.mapboxsdk.style.layers.LineLayer
+import com.mapbox.mapboxsdk.style.layers.Property.VISIBLE
 import com.mapbox.mapboxsdk.style.layers.PropertyFactory.*
 import com.mapbox.mapboxsdk.style.sources.GeoJsonSource
-import com.mapbox.services.android.telemetry.location.LocationEngine
-import com.mapbox.services.android.telemetry.location.LocationEngineListener
-import com.mapbox.services.android.telemetry.location.LocationEnginePriority
-import com.mapbox.services.android.telemetry.location.LostLocationEngine
-import com.mapbox.services.android.telemetry.permissions.PermissionsListener
-import com.mapbox.services.android.telemetry.permissions.PermissionsManager
-import com.mapbox.services.commons.geojson.Feature
-import com.mapbox.services.commons.models.Position
-import com.squareup.moshi.Moshi
 import io.reactivex.android.schedulers.AndroidSchedulers
 import io.reactivex.schedulers.Schedulers
 import timber.log.Timber
@@ -48,6 +52,8 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback, LocationEngineList
     companion object {
         const val GEO_SOURCE_ID = "Source_1"
         const val GEO_LAYER_ID = "Layer_1"
+        const val GEO_FILL_LAYER_ID = "FillLayer1"
+        const val GEO_LINE_LAYER_ID = "LineLayer1"
     }
 
     var permissionsManager: PermissionsManager? = null
@@ -55,6 +61,12 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback, LocationEngineList
     var locationPlugin: LocationLayerPlugin? = null
     var locationEngine: LocationEngine? = null
     var originLocation: Location? = null
+
+    var menuFabIsOpen = false
+    lateinit var menuFab: FloatingActionButton
+    lateinit var settingsFab: FloatingActionButton
+    lateinit var localModeFab: FloatingActionButton
+    lateinit var liveModeFab: FloatingActionButton
 
     var zones: FeatureCollection? = null
     val polygonList = ArrayList<ArrayList<LatLng>>()
@@ -69,9 +81,76 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback, LocationEngineList
 
         //dlZones()
 
+        getFABulous()
+
         mapView = findViewById(R.id.mapView)
         mapView.onCreate(savedInstanceState)
+        mapView.setStyleUrl(MAPBOX_STREETS)
         mapView.getMapAsync(this)
+    }
+
+    fun getFABulous() {
+        menuFab = findViewById(R.id.menuFab)
+        settingsFab = findViewById(R.id.settingsFab)
+        localModeFab = findViewById(R.id.localModeFab)
+        liveModeFab = findViewById(R.id.liveModeFab)
+        rotateFabsOut()
+
+        menuFab.setOnClickListener({ v ->
+            if (menuFabIsOpen) {
+                Timber.d("fabs are open; closing the fabs")
+                rotateFabsOut()
+                menuFabIsOpen = false
+            } else {
+                Timber.d("fabs are closed; opening the fabs")
+                rotateFabsIn()
+                menuFabIsOpen = true
+            }
+        })
+    }
+
+    fun rotateFabsIn() {
+        val center = IntArray(2)
+        menuFab.getLocationInWindow(center)
+        //   center[0] = center[0] - (menuFab.width / 2)
+        center[1] = center[1] - (menuFab.height / 2)
+        val rectf = RectF()
+        val radius = 250f
+        rectf.set(-radius, -radius, radius, radius)
+        rectf.offset(center[0].toFloat(), center[1].toFloat())
+
+        val fabs = arrayOf(settingsFab, localModeFab, liveModeFab)
+        var angle = -90f
+        for (fab in fabs) {
+            val path = Path()
+            path.arcTo(rectf, angle, -180f, true)
+            val animator = ObjectAnimator.ofFloat(fab, View.X, View.Y, path)
+            animator.duration = 800
+            animator.start()
+            angle -= 45f
+        }
+    }
+
+    fun rotateFabsOut() {
+        val center = IntArray(2)
+        menuFab.getLocationInWindow(center)
+        //   center[0] = center[0] - (menuFab.width / 2)
+        center[1] = center[1] - (menuFab.height / 2)
+        val rectf = RectF()
+        val radius = 250f
+        rectf.set(-radius, -radius, radius, radius)
+        rectf.offset(center[0].toFloat(), center[1].toFloat())
+
+        val fabs = arrayOf(settingsFab, localModeFab, liveModeFab)
+        var angle = -90f - 180f
+        for (fab in fabs) {
+            val path = Path()
+            path.arcTo(rectf, angle, 180f, true)
+            val animator = ObjectAnimator.ofFloat(fab, View.X, View.Y, path)
+            animator.duration = 800
+            animator.start()
+            angle -= 45f
+        }
     }
 
     @SuppressLint("MissingPermission")
@@ -112,18 +191,14 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback, LocationEngineList
             mapboxMap = map
             mapboxMap?.let {
                 it.addOnMapClickListener(this)
-              //  it.addSource(GeoJsonSource(GEO_SOURCE_ID, URL("https://pac-map.herokuapp.com/geo/")))
+                it.addSource(GeoJsonSource(GEO_SOURCE_ID, URL("https://pac-map.herokuapp.com/geo/")))
             }
 
         }
 
         // Check if permissions are enabled and if not request
         if (PermissionsManager.areLocationPermissionsGranted(this)) {
-
-            // With LocationLayer 0.5.0+ it should be:
-            // locationEngine = LocationEngineProvider(this).obtainBestLocationEngineAvailable()
-            locationEngine = LostLocationEngine(this)
-
+            locationEngine = LocationEngineProvider(this).obtainBestLocationEngineAvailable()
             locationEngine?.let {
                 it.priority = LocationEnginePriority.HIGH_ACCURACY
                 it.fastestInterval = 1000
@@ -138,29 +213,36 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback, LocationEngineList
             }
 
             mapboxMap?.let {
-                locationPlugin = LocationLayerPlugin(mapView, it, locationEngine)
-                locationPlugin?.setLocationLayerEnabled(LocationLayerMode.TRACKING)
+                val options = LocationLayerOptions.builder(this).build();
+                locationPlugin = LocationLayerPlugin(mapView, it, locationEngine, options);
+                locationPlugin?.cameraMode = CameraMode.TRACKING
             }
         } else {
             permissionsManager = PermissionsManager(this)
             permissionsManager?.requestLocationPermissions(this)
         }
 
-        updateZones()
-       // addExtrusionsLayerToMap()
+        //updateZones()
+        addExtrusionsLayerToMap()
     }
 
     private fun addExtrusionsLayerToMap() {
         // Add FillExtrusion layer to map using GeoJSON data
-        val courseExtrusionLayer = FillExtrusionLayer(GEO_LAYER_ID, GEO_SOURCE_ID);
-        courseExtrusionLayer.setProperties(
-                lineWidth(10f),
-                lineOpacity(0.8f),
-                fillOutlineColor(Color.parseColor("#5e64e5")),
-                fillExtrusionColor(Color.parseColor("#dc6e63")),
-                fillExtrusionOpacity(0.35f))
+        val fillLayer = FillLayer(GEO_FILL_LAYER_ID, GEO_SOURCE_ID)
+        fillLayer.setProperties(
+                visibility(VISIBLE),
+                fillColor(Color.parseColor("#0000ff")),
+                fillOutlineColor(Color.parseColor("#000000ff")),
+                fillOpacity(0.25f))
+        mapboxMap?.addLayer(fillLayer)
 
-        mapboxMap?.addLayer(courseExtrusionLayer);
+        val lineLayer = LineLayer(GEO_LINE_LAYER_ID, GEO_SOURCE_ID)
+        lineLayer.setProperties(
+                visibility(VISIBLE),
+                lineWidth(2f),
+                lineOpacity(0.4f),
+                lineColor(Color.parseColor("#ff0000")))
+        mapboxMap?.addLayer(lineLayer)
     }
 
     override fun onMapClick(point: LatLng) {
@@ -169,12 +251,12 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback, LocationEngineList
             val pointf = map.projection.toScreenLocation(point)
             val rectF = RectF(pointf.x - 10, pointf.y - 10, pointf.x + 10, pointf.y + 10)
 
-            val featureList = map.queryRenderedFeatures(rectF, GEO_LAYER_ID) as List<Feature>
+            val featureList = map.queryRenderedFeatures(rectF, GEO_FILL_LAYER_ID) as List<Feature>
 
             for (feature in featureList) {
                 Timber.d("Feature found with %s", feature.toJson())
 
-                Toast.makeText(this, "polygon clicked",
+                Toast.makeText(this, "region selected",
                         Toast.LENGTH_SHORT).show()
                 zoomToFeature(feature)
             }
@@ -182,17 +264,15 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback, LocationEngineList
     }
 
     private fun zoomToFeature(feature: Feature) {
-        val bounds = LatLngBounds.Builder()
-        val lls = featureToCoords(feature)
-        if (lls.isEmpty()){
-            Timber.e("no coordinates returned. Is this a MultiPolygon?")
+        val bounds = featureToCoords(feature)
+        if (bounds == null) {
+            Timber.e("Cannot zoom to feature; no LatLngs received:\n %s", feature)
             Toast.makeText(this, "MultiPolygons not yet supported", Toast.LENGTH_LONG).show()
+            return
         }
-        for (ll in lls) {
-            bounds.include(ll)
-        }
+
         mapboxMap?.moveCamera(CameraUpdateFactory
-                .newLatLngBounds(bounds.build(), 20))
+                .newLatLngBounds(bounds, 20))
     }
 
     fun updateZones() {
@@ -210,13 +290,13 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback, LocationEngineList
                             Timber.v("Result : %s", result)
                             zones = result
 
-                            val moshi =  Moshi.Builder().build()
-                            val jsonAdapter = moshi.adapter(FeatureCollection::class.java)
-                            val json = jsonAdapter.toJson(zones)
-                            mapboxMap?.addSource(GeoJsonSource(GEO_SOURCE_ID, json.toString()))
-                            addExtrusionsLayerToMap()
+//                            val moshi =  Moshi.Builder().build()
+//                            val jsonAdapter = moshi.adapter(FeatureCollection::class.java)
+//                            val json = jsonAdapter.toJson(zones)
+//                            mapboxMap?.addSource(GeoJsonSource(GEO_SOURCE_ID, json.toString()))
+//                            addExtrusionsLayerToMap()
 
-                            //drawPolygons()
+                            drawPolygons()
                         },
                         { error ->
                             Timber.e(error)
@@ -237,24 +317,33 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback, LocationEngineList
         return lls
     }
 
-    private fun featureToCoords(feature: Feature): List<LatLng> {
-        val lls = ArrayList<LatLng>()
-        if (feature.geometry.type == "Polygon") {
-            if (feature.geometry.coordinates is ArrayList<*>) {
-                for (geomCoord in feature.geometry.coordinates as ArrayList<*>) {
-                    if (geomCoord is ArrayList<*>) {
-                        for (pos in geomCoord) {
-                            if (pos is Position) {
-                                lls.add(LatLng(pos.latitude , pos.longitude))
-                            }
+    private fun featureToCoords(feature: Feature): LatLngBounds? {
+        val bounds = LatLngBounds.Builder()
+
+        feature.bbox()?.let { bb ->
+            bounds.include(LatLng(bb.southwest().latitude(), bb.southwest().longitude()))
+            bounds.include(LatLng(bb.northeast().latitude(), bb.northeast().longitude()))
+            return bounds.build()
+        }
+
+        feature.geometry()?.let { geometry ->
+            if (geometry.type() == "Polygon") {
+                Timber.d("Found a Polygon in the dataset.")
+                val poly = geometry as Polygon
+                poly.coordinates()?.let { coordinates ->
+                    for (coord in coordinates) {
+                        for (point in coord) {
+                            bounds.include(LatLng(point.latitude(), point.longitude()))
                         }
                     }
                 }
+            } else {
+                Timber.d("Found a Feature of type %s in the dataset, which is currently not supported.", geometry.type())
+                return null
             }
-        } else if (feature.geometry.type == "MultiPolygon") {
-            Timber.w("Found a MultiPolygon in the dataset. Not yet supportted.")
         }
-        return lls
+
+        return bounds.build()
     }
 
     private fun drawPolygons() {
@@ -279,8 +368,9 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback, LocationEngineList
         for (p in polygonList) {
             mapboxMap?.addPolygon(PolygonOptions()
                     .addAll(p)
-                    .alpha(0.25f)
-                    .fillColor(Color.parseColor("#3bb2d0")))
+                    .alpha(0.3f)
+                    .strokeColor(Color.parseColor("#ff0000"))
+                    .fillColor(Color.parseColor("#5e64e5")))
         }
     }
 
