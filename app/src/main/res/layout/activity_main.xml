@@ -14,6 +14,7 @@
         android:layout_marginStart="16dp"
         android:layout_marginTop="16dp"
         android:clickable="true"
+        android:contentDescription="Menu"
         android:focusable="true"
         mapbox:layout_constraintStart_toStartOf="parent"
         mapbox:layout_constraintTop_toTopOf="parent"
@@ -24,11 +25,12 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:clickable="true"
+        android:contentDescription="Settings"
         android:focusable="true"
         app:layout_constraintCircle="@+id/menuFab"
         app:layout_constraintCircleAngle="90"
         app:layout_constraintCircleRadius="100dp"
-        mapbox:srcCompat="@android:drawable/ic_menu_manage"
+        app:srcCompat="@android:drawable/ic_menu_manage"
         tools:layout_editor_absoluteX="90dp"/>
 
     <android.support.design.widget.FloatingActionButton
@@ -36,26 +38,28 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:clickable="true"
+        android:contentDescription="Synchronize Data"
         android:focusable="true"
         app:layout_constraintCircle="@+id/menuFab"
         app:layout_constraintCircleAngle="135"
         app:layout_constraintCircleRadius="100dp"
-        mapbox:srcCompat="@android:drawable/stat_notify_sdcard"
+        app:srcCompat="@android:drawable/stat_notify_sdcard"
         tools:layout_editor_absoluteX="16dp"
         tools:layout_editor_absoluteY="84dp"/>
 
     <android.support.design.widget.FloatingActionButton
-        android:id="@+id/localModeFab"
+        android:id="@+id/showInfoFab"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginTop="44dp"
         android:clickable="true"
+        android:contentDescription="Information"
         android:focusable="true"
         app:layout_constraintCircle="@+id/menuFab"
         app:layout_constraintCircleAngle="180"
         app:layout_constraintCircleRadius="100dp"
-        mapbox:srcCompat="@android:drawable/ic_popup_sync"
-        tools:layout_editor_absoluteX="90dp"/>
+        app:srcCompat="@android:drawable/ic_dialog_info"
+        tools:layout_editor_absoluteX="90dp"
+        tools:layout_editor_absoluteY="116dp"/>
 
 
     <Button
@@ -65,11 +69,24 @@
         android:layout_alignParentBottom="true"
         android:layout_centerHorizontal="true"
         android:layout_marginBottom="24dp"
-        android:visibility="gone"
         android:text="Start Navigation"
+        android:visibility="gone"
         app:layout_constraintBottom_toBottomOf="@+id/mapView"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"/>
+
+    <ProgressBar
+        android:id="@+id/progressBar"
+        style="?android:attr/progressBarStyleLarge"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:progressDrawable="@drawable/circular_progress_bar"
+        android:indeterminate="true"
+        android:elevation="2dp"
+        app:layout_constraintBottom_toTopOf="@+id/navButton"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="@+id/mapView"/>
 
     <com.mapbox.mapboxsdk.maps.MapView
         android:id="@+id/mapView"

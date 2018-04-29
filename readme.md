@@ -13,7 +13,7 @@ This app helps a driver navigate through unmapped roads so they can provide imag
 
 ### Phase 1 (MVP):
 - [x] display a map to the user
-- [ ] allow the user to select a map area from a list of areas that need to be driven
+- [x] allow the user to select a map area from a list of areas that need to be driven
 - [x] overlay a polygon on the map, highlighting the area that needs to be driven
 - [ ] trace the user's position on the map, drawing a line where the user has been
 

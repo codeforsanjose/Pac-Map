@@ -4,6 +4,8 @@ apply plugin: 'kotlin-android'
 
 apply plugin: 'kotlin-android-extensions'
 
+apply plugin: 'com.google.gms.oss.licenses.plugin'
+
 android {
     compileSdkVersion 27
     defaultConfig {
@@ -49,6 +51,7 @@ dependencies {
     implementation 'com.mapbox.mapboxsdk:mapbox-android-navigation:0.13.0-SNAPSHOT'
     implementation 'com.mapbox.mapboxsdk:mapbox-android-navigation-ui:0.13.0-SNAPSHOT'
 
+    implementation 'com.google.android.gms:play-services-oss-licenses:15.0.0'
     implementation 'com.google.code.gson:gson:2.8.2'
     implementation 'com.squareup.moshi:moshi:1.5.0'
     implementation 'com.squareup.okhttp3:logging-interceptor:3.10.0'

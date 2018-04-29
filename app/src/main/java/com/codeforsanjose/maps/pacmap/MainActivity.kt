@@ -2,6 +2,7 @@ package com.codeforsanjose.maps.pacmap
 
 import android.animation.ObjectAnimator
 import android.annotation.SuppressLint
+import android.content.Intent
 import android.graphics.Color
 import android.graphics.Path
 import android.graphics.RectF
@@ -10,16 +11,23 @@ import android.os.Bundle
 import android.support.design.widget.FloatingActionButton
 import android.support.v7.app.AppCompatActivity
 import android.view.View
+import android.view.Window
+import android.widget.Button
+import android.widget.ProgressBar
 import android.widget.Toast
 import com.codeforsanjose.maps.pacmap.zone.FeatureCollection
 import com.codeforsanjose.maps.pacmap.zone.ZoneManager.Companion.fetchZones
+import com.google.android.gms.oss.licenses.OssLicensesMenuActivity
 import com.mapbox.android.core.location.LocationEngine
 import com.mapbox.android.core.location.LocationEngineListener
 import com.mapbox.android.core.location.LocationEnginePriority
 import com.mapbox.android.core.location.LocationEngineProvider
 import com.mapbox.android.core.permissions.PermissionsListener
 import com.mapbox.android.core.permissions.PermissionsManager
+import com.mapbox.api.directions.v5.models.DirectionsResponse
+import com.mapbox.api.directions.v5.models.DirectionsRoute
 import com.mapbox.geojson.Feature
+import com.mapbox.geojson.Point
 import com.mapbox.geojson.Polygon
 import com.mapbox.mapboxsdk.Mapbox
 import com.mapbox.mapboxsdk.annotations.PolygonOptions
@@ -39,8 +47,15 @@ import com.mapbox.mapboxsdk.style.layers.LineLayer
 import com.mapbox.mapboxsdk.style.layers.Property.VISIBLE
 import com.mapbox.mapboxsdk.style.layers.PropertyFactory.*
 import com.mapbox.mapboxsdk.style.sources.GeoJsonSource
+import com.mapbox.services.android.navigation.ui.v5.NavigationLauncher
+import com.mapbox.services.android.navigation.ui.v5.NavigationLauncherOptions
+import com.mapbox.services.android.navigation.ui.v5.route.NavigationMapRoute
+import com.mapbox.services.android.navigation.v5.navigation.NavigationRoute
 import io.reactivex.android.schedulers.AndroidSchedulers
 import io.reactivex.schedulers.Schedulers
+import retrofit2.Call
+import retrofit2.Callback
+import retrofit2.Response
 import timber.log.Timber
 import java.net.URL
 
@@ -51,7 +66,6 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback, LocationEngineList
 
     companion object {
         const val GEO_SOURCE_ID = "Source_1"
-        const val GEO_LAYER_ID = "Layer_1"
         const val GEO_FILL_LAYER_ID = "FillLayer1"
         const val GEO_LINE_LAYER_ID = "LineLayer1"
     }
@@ -61,12 +75,16 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback, LocationEngineList
     var locationPlugin: LocationLayerPlugin? = null
     var locationEngine: LocationEngine? = null
     var originLocation: Location? = null
+    var currentRoute: DirectionsRoute? = null
+    var navigationMapRoute: NavigationMapRoute? = null
 
     var menuFabIsOpen = false
+    lateinit var progressBar: ProgressBar
     lateinit var menuFab: FloatingActionButton
     lateinit var settingsFab: FloatingActionButton
-    lateinit var localModeFab: FloatingActionButton
+    lateinit var showInfoFab: FloatingActionButton
     lateinit var liveModeFab: FloatingActionButton
+    lateinit var navigateHereButton: Button
 
     var zones: FeatureCollection? = null
     val polygonList = ArrayList<ArrayList<LatLng>>()
@@ -75,6 +93,8 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback, LocationEngineList
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        window.requestFeature(Window.FEATURE_ACTION_BAR)
+        supportActionBar?.hide()
         Mapbox.getInstance(this, getString(R.string.access_token))
 
         setContentView(R.layout.activity_main)
@@ -83,20 +103,24 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback, LocationEngineList
 
         getFABulous()
 
+        progressBar = findViewById(R.id.progressBar)
+        progressBar.visibility = View.GONE
+
+        navigateHereButton = findViewById(R.id.navButton)
         mapView = findViewById(R.id.mapView)
         mapView.onCreate(savedInstanceState)
         mapView.setStyleUrl(MAPBOX_STREETS)
         mapView.getMapAsync(this)
     }
 
-    fun getFABulous() {
+    private fun getFABulous() {
         menuFab = findViewById(R.id.menuFab)
         settingsFab = findViewById(R.id.settingsFab)
-        localModeFab = findViewById(R.id.localModeFab)
+        showInfoFab = findViewById(R.id.showInfoFab)
         liveModeFab = findViewById(R.id.liveModeFab)
         rotateFabsOut()
 
-        menuFab.setOnClickListener({ v ->
+        menuFab.setOnClickListener { _ ->
             if (menuFabIsOpen) {
                 Timber.d("fabs are open; closing the fabs")
                 rotateFabsOut()
@@ -106,10 +130,24 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback, LocationEngineList
                 rotateFabsIn()
                 menuFabIsOpen = true
             }
-        })
+        }
+
+        settingsFab.setOnClickListener { _ ->
+            Timber.d("Settings FAB was touched")
+            startActivity(Intent(this, SettingsActivity::class.java))
+        }
+
+        showInfoFab.setOnClickListener { _ ->
+            Timber.d("Info FAB was touched")
+            startActivity(Intent(this, OssLicensesMenuActivity::class.java))
+        }
+
+        liveModeFab.setOnClickListener { _ ->
+            Timber.d("Settings FAB was touched")
+        }
     }
 
-    fun rotateFabsIn() {
+    private fun rotateFabsIn() {
         val center = IntArray(2)
         menuFab.getLocationInWindow(center)
         //   center[0] = center[0] - (menuFab.width / 2)
@@ -119,7 +157,7 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback, LocationEngineList
         rectf.set(-radius, -radius, radius, radius)
         rectf.offset(center[0].toFloat(), center[1].toFloat())
 
-        val fabs = arrayOf(settingsFab, localModeFab, liveModeFab)
+        val fabs = arrayOf(settingsFab, showInfoFab, liveModeFab)
         var angle = -90f
         for (fab in fabs) {
             val path = Path()
@@ -131,7 +169,7 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback, LocationEngineList
         }
     }
 
-    fun rotateFabsOut() {
+    private fun rotateFabsOut() {
         val center = IntArray(2)
         menuFab.getLocationInWindow(center)
         //   center[0] = center[0] - (menuFab.width / 2)
@@ -141,7 +179,7 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback, LocationEngineList
         rectf.set(-radius, -radius, radius, radius)
         rectf.offset(center[0].toFloat(), center[1].toFloat())
 
-        val fabs = arrayOf(settingsFab, localModeFab, liveModeFab)
+        val fabs = arrayOf(settingsFab, showInfoFab, liveModeFab)
         var angle = -90f - 180f
         for (fab in fabs) {
             val path = Path()
@@ -193,7 +231,6 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback, LocationEngineList
                 it.addOnMapClickListener(this)
                 it.addSource(GeoJsonSource(GEO_SOURCE_ID, URL("https://pac-map.herokuapp.com/geo/")))
             }
-
         }
 
         // Check if permissions are enabled and if not request
@@ -223,11 +260,11 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback, LocationEngineList
         }
 
         //updateZones()
-        addExtrusionsLayerToMap()
+        addGeoJsonLayersToMap()
     }
 
-    private fun addExtrusionsLayerToMap() {
-        // Add FillExtrusion layer to map using GeoJSON data
+    private fun addGeoJsonLayersToMap() {
+        // Fill in the polygons
         val fillLayer = FillLayer(GEO_FILL_LAYER_ID, GEO_SOURCE_ID)
         fillLayer.setProperties(
                 visibility(VISIBLE),
@@ -236,6 +273,7 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback, LocationEngineList
                 fillOpacity(0.25f))
         mapboxMap?.addLayer(fillLayer)
 
+        // Draw the polygon outlines
         val lineLayer = LineLayer(GEO_LINE_LAYER_ID, GEO_SOURCE_ID)
         lineLayer.setProperties(
                 visibility(VISIBLE),
@@ -252,13 +290,10 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback, LocationEngineList
             val rectF = RectF(pointf.x - 10, pointf.y - 10, pointf.x + 10, pointf.y + 10)
 
             val featureList = map.queryRenderedFeatures(rectF, GEO_FILL_LAYER_ID) as List<Feature>
-
-            for (feature in featureList) {
-                Timber.d("Feature found with %s", feature.toJson())
-
-                Toast.makeText(this, "region selected",
-                        Toast.LENGTH_SHORT).show()
-                zoomToFeature(feature)
+            if (!featureList.isEmpty()) {
+                val feat = featureList.first()
+                Timber.d("Feature found with %s", feat.toJson())
+                zoomToFeature(feat)
             }
         }
     }
@@ -270,10 +305,84 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback, LocationEngineList
             Toast.makeText(this, "MultiPolygons not yet supported", Toast.LENGTH_LONG).show()
             return
         }
-
         mapboxMap?.moveCamera(CameraUpdateFactory
                 .newLatLngBounds(bounds, 20))
+
+        originLocation?.let { userLocation ->
+            val originPosition = Point.fromLngLat(userLocation.longitude, userLocation.latitude)
+            val destinationPosition = Point.fromLngLat(bounds.center.longitude, bounds.center.latitude)
+            getRoute(originPosition, destinationPosition)
+            progressBar.visibility = View.VISIBLE
+
+            navigateHereButton.text = "Finding Route..."
+            navigateHereButton.isEnabled = false
+            navigateHereButton.visibility = View.VISIBLE
+            navigateHereButton.setOnClickListener {
+                Timber.d("Nagivation button was clicked")
+
+                // Pass in your Amazon Polly pool id for speech synthesis using Amazon Polly
+                // Set to null to use the default Android speech synthesizer
+                val awsPoolId: String? = null
+                val simulateRoute = true
+                val options = NavigationLauncherOptions.builder()
+                        .origin(originPosition)
+                        .destination(destinationPosition)
+                        //.awsPoolId(awsPoolId)
+                        .shouldSimulateRoute(simulateRoute)
+                        .build()
+                NavigationLauncher.startNavigation(this, options)
+            }
+        }
     }
+
+    private fun getRoute(origin: Point, destination: Point) {
+        NavigationRoute.builder()
+                .accessToken(Mapbox.getAccessToken())
+                .origin(origin)
+                .destination(destination)
+                .build()
+                .getRoute(object : Callback<DirectionsResponse> {
+                    override fun onFailure(call: Call<DirectionsResponse>?, t: Throwable?) {
+                        Timber.e(t)
+                        Toast.makeText(applicationContext, "", Toast.LENGTH_LONG).show()
+                        progressBar.visibility = View.GONE
+                        navigateHereButton.visibility = View.GONE
+                        navigateHereButton.isEnabled = true
+                    }
+
+                    override fun onResponse(call: Call<DirectionsResponse>?, response: Response<DirectionsResponse>?) {
+                        if (response == null) {
+                            Timber.e("Null DirectionsResponse")
+                            return
+                        }
+                        Timber.d("Response code: %s", response.code())
+                        response.body()?.let { body ->
+                            if (response.body() == null) {
+                                Timber.e("No routes found, make sure you set the right user and access token.")
+                                return
+                            } else if (body.routes().size < 1) {
+                                Timber.e("No routes found")
+                                return
+                            }
+
+                            currentRoute = body.routes()[0]
+
+                            // Draw the route on the map
+                            navigationMapRoute?.removeRoute()
+                            if (navigationMapRoute == null) {
+                                navigationMapRoute = mapboxMap?.let {
+                                    NavigationMapRoute(null, mapView, it, R.style.NavigationMapRoute)
+                                }
+                            }
+                            navigationMapRoute?.addRoute(currentRoute)
+                            navigateHereButton.text = "Navigate to area"
+                            navigateHereButton.isEnabled = true
+                            progressBar.visibility = View.GONE
+                        }
+                    }
+                })
+    }
+
 
     fun updateZones() {
         if (zones != null) {
@@ -294,7 +403,7 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback, LocationEngineList
 //                            val jsonAdapter = moshi.adapter(FeatureCollection::class.java)
 //                            val json = jsonAdapter.toJson(zones)
 //                            mapboxMap?.addSource(GeoJsonSource(GEO_SOURCE_ID, json.toString()))
-//                            addExtrusionsLayerToMap()
+//                            addGeoJsonLayersToMap()
 
                             drawPolygons()
                         },
@@ -362,8 +471,8 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback, LocationEngineList
                 }
                 polygonList.add(poly)
             }
-
         }
+
         Timber.w("About to draw %d polygons to the map", polygonList.size)
         for (p in polygonList) {
             mapboxMap?.addPolygon(PolygonOptions()
@@ -394,7 +503,7 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback, LocationEngineList
         location?.let {
             originLocation = it
             setCameraPosition(it)
-            locationEngine?.removeLocationEngineListener(this)
+            //locationEngine?.removeLocationEngineListener(this)
         }
     }
 
