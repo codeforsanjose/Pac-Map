@@ -15,6 +15,9 @@ import android.view.Window
 import android.widget.Button
 import android.widget.ProgressBar
 import android.widget.Toast
+import com.codeforsanjose.maps.pacmap.StreamUtils.Companion.rawResourceToString
+import com.codeforsanjose.maps.pacmap.demo.DebugLocationEngine
+import com.codeforsanjose.maps.pacmap.demo.LatLngList
 import com.codeforsanjose.maps.pacmap.zone.FeatureCollection
 import com.codeforsanjose.maps.pacmap.zone.ZoneManager.Companion.fetchZones
 import com.google.android.gms.oss.licenses.OssLicensesMenuActivity
@@ -51,6 +54,7 @@ import com.mapbox.services.android.navigation.ui.v5.NavigationLauncher
 import com.mapbox.services.android.navigation.ui.v5.NavigationLauncherOptions
 import com.mapbox.services.android.navigation.ui.v5.route.NavigationMapRoute
 import com.mapbox.services.android.navigation.v5.navigation.NavigationRoute
+import com.squareup.moshi.Moshi
 import io.reactivex.android.schedulers.AndroidSchedulers
 import io.reactivex.schedulers.Schedulers
 import retrofit2.Call
@@ -235,7 +239,23 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback, LocationEngineList
 
         // Check if permissions are enabled and if not request
         if (PermissionsManager.areLocationPermissionsGranted(this)) {
-            locationEngine = LocationEngineProvider(this).obtainBestLocationEngineAvailable()
+
+            if (BuildConfig.DEBUG) {
+                Timber.d("Using the debug location engine")
+                locationEngine = DebugLocationEngine()
+                val debugEngine = (locationEngine as DebugLocationEngine)
+
+                val moshi = Moshi.Builder().build()
+                val jsonAdapter = moshi.adapter(LatLngList::class.java)
+                val demoString = rawResourceToString(this, R.raw.demo_trip_1)
+                val lll = jsonAdapter.fromJson(demoString)
+
+                debugEngine.setSource(lll)
+                debugEngine.activate()
+            } else {
+                locationEngine = LocationEngineProvider(this).obtainBestLocationEngineAvailable()
+            }
+
             locationEngine?.let {
                 it.priority = LocationEnginePriority.HIGH_ACCURACY
                 it.fastestInterval = 1000
@@ -496,7 +516,7 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback, LocationEngineList
 
     private fun setCameraPosition(location: Location) {
         mapboxMap?.animateCamera(CameraUpdateFactory.newLatLngZoom(
-                LatLng(location.latitude, location.longitude), 12.0))
+                LatLng(location.latitude, location.longitude), 16.0))
     }
 
     override fun onLocationChanged(location: Location?) {
