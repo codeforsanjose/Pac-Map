@@ -1,6 +1,11 @@
 # Pac-Map
 
-The project goal is to give drivers an easy way to see which roads have been driven.
+There are roads in [Mapillary](https://www.mapillary.com/) that are missing crowd-sourced image data. Contributors of
+Mapillary need directions to drive through these roads and quickly identify unmapped roads.
+
+This app helps a driver navigate through unmapped roads so they can provide image data through apps like Mapillary.
+
+![Map of San Jose showing gaps in mapped areas](http://url/to/img.png)
 
 ## Project Goals and Status
 
