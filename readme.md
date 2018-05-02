@@ -5,7 +5,7 @@ Mapillary need directions to drive through these roads and quickly identify unma
 
 This app helps a driver navigate through unmapped roads so they can provide image data through apps like Mapillary.
 
-![Map of San Jose showing gaps in mapped areas](http://url/to/img.png)
+![Map of San Jose showing gaps in mapped areas](https://raw.githubusercontent.com/codeforsanjose/Pac-Map/master/server/public/images/SanJose_Mapillary_2018-05-01.png)
 
 ## Project Goals and Status
 
