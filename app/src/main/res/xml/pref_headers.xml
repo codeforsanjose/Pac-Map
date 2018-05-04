@@ -4,7 +4,7 @@
 
     <header
         android:fragment="com.codeforsanjose.maps.pacmap.SettingsActivity$GeneralPreferenceFragment"
-        android:icon="@drawable/ic_info_black_24dp"
+        android:icon="@drawable/ic_settings_black_24px"
         android:title="@string/pref_header_general"/>
 
     <header
@@ -16,5 +16,11 @@
         android:fragment="com.codeforsanjose.maps.pacmap.SettingsActivity$DataSyncPreferenceFragment"
         android:icon="@drawable/ic_sync_black_24dp"
         android:title="@string/pref_header_data_sync"/>
+
+    <header
+        android:fragment="com.codeforsanjose.maps.pacmap.SettingsActivity$AboutFragment"
+        android:icon="@drawable/ic_info_black_24px"
+        android:title="About"/>
+
 
 </preference-headers>

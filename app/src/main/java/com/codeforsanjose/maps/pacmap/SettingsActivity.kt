@@ -1,21 +1,22 @@
 package com.codeforsanjose.maps.pacmap
 
-import android.annotation.TargetApi
+import android.app.Fragment
 import android.content.Context
 import android.content.Intent
 import android.content.res.Configuration
+import android.media.Image
 import android.media.RingtoneManager
 import android.net.Uri
-import android.os.Build
 import android.os.Bundle
-import android.preference.ListPreference
-import android.preference.Preference
-import android.preference.PreferenceActivity
-import android.preference.PreferenceFragment
-import android.preference.PreferenceManager
-import android.preference.RingtonePreference
+import android.preference.*
 import android.text.TextUtils
+import android.view.LayoutInflater
 import android.view.MenuItem
+import android.view.View
+import android.view.ViewGroup
+import android.widget.ImageView
+import timber.log.Timber
+
 
 /**
  * A [PreferenceActivity] that presents a set of application settings. On
@@ -64,6 +65,7 @@ class SettingsActivity : AppCompatPreferenceActivity() {
                 || GeneralPreferenceFragment::class.java.name == fragmentName
                 || DataSyncPreferenceFragment::class.java.name == fragmentName
                 || NotificationPreferenceFragment::class.java.name == fragmentName
+                || AboutFragment::class.java.name == fragmentName
     }
 
     /**
@@ -146,6 +148,28 @@ class SettingsActivity : AppCompatPreferenceActivity() {
             }
             return super.onOptionsItemSelected(item)
         }
+    }
+
+    class AboutFragment : Fragment() {
+        lateinit var cfsjImage: ImageView
+        lateinit var ghImage: ImageView
+
+        override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
+            val view = inflater.inflate(R.layout.about_fragment, container, false)
+            cfsjImage = view.findViewById(R.id.cfsjImageView)
+            ghImage = view.findViewById(R.id.ghImageView)
+
+            cfsjImage.setOnClickListener {
+                Timber.d("CFSJ Image was clicked")
+            }
+
+            ghImage.setOnClickListener {
+                Timber.d("GitHub Image was clicked")
+            }
+
+            return view
+        }
+
     }
 
     companion object {

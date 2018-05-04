@@ -1,8 +1,6 @@
 package com.codeforsanjose.maps.pacmap.zone
 
-import android.content.Context
-import android.util.Log
-import com.mapbox.mapboxsdk.Mapbox.getApplicationContext
+import com.codeforsanjose.maps.pacmap.core.StreamUtils.Companion.writeResponseBodyToAssets
 import io.reactivex.Completable
 import io.reactivex.Observable
 import io.reactivex.schedulers.Schedulers
@@ -13,9 +11,6 @@ import retrofit2.Retrofit
 import retrofit2.adapter.rxjava2.RxJava2CallAdapterFactory
 import retrofit2.converter.moshi.MoshiConverterFactory
 import timber.log.Timber
-import java.io.IOException
-import java.io.InputStream
-import java.nio.charset.StandardCharsets.UTF_8
 
 
 class ZoneManager {
@@ -98,65 +93,6 @@ class ZoneManager {
             }, { error ->
                 Timber.e(error)
             })
-        }
-
-        private fun loadFileFromAsset(filename: String): String? {
-            return try {
-                val inputString = getApplicationContext().assets.open(filename)
-                val size = inputString.available()
-                val buffer = ByteArray(size)
-                inputString.read(buffer)
-                inputString.close()
-                String(buffer, UTF_8)
-            } catch (exception: Exception) {
-                Log.e("Exception Loading file from Assets: %s", exception.toString())
-                exception.printStackTrace()
-                null
-            }
-        }
-
-        private fun writeResponseBodyToAssets(body: ResponseBody?): Boolean {
-            if (body == null) {
-                Timber.w("Null response body")
-                return false
-            }
-            try {
-                val filename = GEOJSON_FILENAME
-                getApplicationContext().openFileOutput(filename, Context.MODE_PRIVATE).use { outputStream ->
-                    var inputStream: InputStream? = null
-
-                    try {
-                        val fileReader = ByteArray(4096)
-                        val fileSize = body.contentLength()
-                        var fileSizeDownloaded: Long = 0
-
-                        inputStream = body.byteStream()
-
-                        while (true) {
-                            val read = inputStream!!.read(fileReader)
-                            if (read == -1) {
-                                break
-                            }
-
-                            outputStream.write(fileReader, 0, read)
-                            fileSizeDownloaded += read.toLong()
-
-                            Timber.d("file download: $fileSizeDownloaded of $fileSize")
-                        }
-                        outputStream.flush()
-                        return true
-                    } catch (e: IOException) {
-                        Timber.e(e)
-                        return false
-                    } finally {
-                        inputStream?.close()
-                        outputStream?.close()
-                    }
-                }
-            } catch (e: IOException) {
-                Timber.e(e)
-                return false
-            }
         }
     }
 }

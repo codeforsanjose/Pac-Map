@@ -18,7 +18,7 @@
         android:focusable="true"
         mapbox:layout_constraintStart_toStartOf="parent"
         mapbox:layout_constraintTop_toTopOf="parent"
-        mapbox:srcCompat="@android:drawable/ic_menu_more"/>
+        mapbox:srcCompat="@drawable/ic_arrow_drop_down_circle_white_24px"/>
 
     <android.support.design.widget.FloatingActionButton
         android:id="@+id/settingsFab"
@@ -30,7 +30,7 @@
         app:layout_constraintCircle="@+id/menuFab"
         app:layout_constraintCircleAngle="90"
         app:layout_constraintCircleRadius="100dp"
-        app:srcCompat="@android:drawable/ic_menu_manage"
+        app:srcCompat="@drawable/ic_settings_white_24px"
         tools:layout_editor_absoluteX="90dp"/>
 
     <android.support.design.widget.FloatingActionButton
@@ -57,7 +57,7 @@
         app:layout_constraintCircle="@+id/menuFab"
         app:layout_constraintCircleAngle="180"
         app:layout_constraintCircleRadius="100dp"
-        app:srcCompat="@android:drawable/ic_dialog_info"
+        app:srcCompat="@drawable/ic_info_white_24px"
         tools:layout_editor_absoluteX="90dp"
         tools:layout_editor_absoluteY="116dp"/>
 

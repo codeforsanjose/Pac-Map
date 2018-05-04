@@ -23,18 +23,12 @@ class DebugLocationEngine() :
                     .concatMapIterable({ coords -> coords.asIterable() })
                     .concatMap({ i -> Observable.just(i).delay(500, TimeUnit.MILLISECONDS) })
                     .observeOn(AndroidSchedulers.mainThread())
-//                    .doOnNext({ ll ->
-//
-//                    })
                     .subscribe(
                             { ll ->
                                 Timber.d("Moving to Location [%s, %s]", ll[0], ll[1])
 
                                 location = mockLocation(Point.fromLngLat(ll[0], ll[1]))
-
-                                //moveToLocation(Point.fromLngLat(ll[0], ll[1]))
                                 location?.let { l ->
-
                                     for (listener in locationListeners) {
                                         listener.onLocationChanged(l)
                                     }

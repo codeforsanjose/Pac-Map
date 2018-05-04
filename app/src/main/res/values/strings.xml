@@ -94,4 +94,10 @@
     <string name="pref_ringtone_silent">Silent</string>
 
     <string name="pref_title_vibrate">Vibrate</string>
+    <string name="project_desc_about_text">Pac-Map is a free and open source project developed by Code For San Jose
+        for the purpose of improving Open Street Maps.\n\nWant to contribute or report an issue? Check out
+        Pac-Map on
+        GitHub.</string>
+    <string name="github_logo_desc">GitHub logo</string>
+    <string name="code_for_san_jose_logo_desc">Code For San Jose logo</string>
 </resources>

@@ -15,7 +15,7 @@ import android.view.Window
 import android.widget.Button
 import android.widget.ProgressBar
 import android.widget.Toast
-import com.codeforsanjose.maps.pacmap.StreamUtils.Companion.rawResourceToString
+import com.codeforsanjose.maps.pacmap.core.StreamUtils.Companion.rawResourceToString
 import com.codeforsanjose.maps.pacmap.demo.DebugLocationEngine
 import com.codeforsanjose.maps.pacmap.demo.LatLngList
 import com.codeforsanjose.maps.pacmap.zone.FeatureCollection
@@ -471,7 +471,6 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback, LocationEngineList
                 return null
             }
         }
-
         return bounds.build()
     }
 
@@ -523,7 +522,6 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback, LocationEngineList
         location?.let {
             originLocation = it
             setCameraPosition(it)
-            //locationEngine?.removeLocationEngineListener(this)
         }
     }
 
