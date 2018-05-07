@@ -1,7 +1,7 @@
 # Pac-Map
 
 <p align="center">
-![Pac-Map icon](https://raw.githubusercontent.com/codeforsanjose/Pac-Map/master/app/src/main/res/mipmap-xxxhdpi/ic_launcher.png)
+<img src="https://raw.githubusercontent.com/codeforsanjose/Pac-Map/master/app/src/main/res/mipmap-xxxhdpi/ic_launcher.png" alt="Pac-Map icon"/>
 <p>
 
 There are roads in [Mapillary](https://www.mapillary.com/) that are missing crowd-sourced image data. Contributors of
