@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">Pacmap</string>
+    <string name="app_name">Pac-Map</string>
     <string name="user_location_permission_not_granted">Permissions not granted!</string>
     <string name="access_token">pk.eyJ1Ijoia2ZhbGNvbmVyIiwiYSI6ImNqZHplaWo3dTAxcHMyd3F0ZTAzdDI5b3cifQ.8_95Wz1ktmePGxUkSCNjog</string>
     <string name="download_button_text">Download</string>

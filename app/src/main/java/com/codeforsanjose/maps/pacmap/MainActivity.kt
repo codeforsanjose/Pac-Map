@@ -34,6 +34,8 @@ import com.mapbox.geojson.Point
 import com.mapbox.geojson.Polygon
 import com.mapbox.mapboxsdk.Mapbox
 import com.mapbox.mapboxsdk.annotations.PolygonOptions
+import com.mapbox.mapboxsdk.annotations.Polyline
+import com.mapbox.mapboxsdk.annotations.PolylineOptions
 import com.mapbox.mapboxsdk.camera.CameraUpdateFactory
 import com.mapbox.mapboxsdk.constants.Style.MAPBOX_STREETS
 import com.mapbox.mapboxsdk.geometry.LatLng
@@ -81,6 +83,8 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback, LocationEngineList
     var originLocation: Location? = null
     var currentRoute: DirectionsRoute? = null
     var navigationMapRoute: NavigationMapRoute? = null
+
+    var previousLocations : ArrayList<LatLng> = arrayListOf()
 
     var menuFabIsOpen = false
     lateinit var progressBar: ProgressBar
@@ -560,8 +564,22 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback, LocationEngineList
     override fun onLocationChanged(location: Location?) {
         location?.let {
             originLocation = it
+            updateDrivingLine( LatLng(it.latitude, it.longitude))
             setCameraPosition(it)
         }
+    }
+
+    private fun updateDrivingLine(ll : LatLng){
+        previousLocations.add(ll)
+        if (previousLocations.isEmpty()){
+            Timber.d("Empty locations list")
+            return
+        }
+        mapboxMap?.addPolyline(PolylineOptions()
+                .addAll(previousLocations)
+                .color(Color.parseColor("#098e17"))
+                .alpha(1f)
+                .width(5f))
     }
 
     @SuppressLint("MissingPermission")
