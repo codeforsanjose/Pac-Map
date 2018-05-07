@@ -15,22 +15,30 @@ class DebugLocationEngine() :
 
     // private var lastLocation: Location? = Location(DebugLocationEngine::class.java.simpleName)
     private var location: Location? = null
+    private var tracking: Boolean = false
+
+    override fun deactivate() {
+        tracking = false
+        super.deactivate()
+    }
 
     fun setSource(lll: LatLngList?) {
+        tracking = true
         lll?.let {
             Observable.fromArray(it.coordinates)
                     .subscribeOn(Schedulers.io())
                     .concatMapIterable({ coords -> coords.asIterable() })
-                    .concatMap({ i -> Observable.just(i).delay(500, TimeUnit.MILLISECONDS) })
+                    .concatMap({ i -> Observable.just(i).delay(700, TimeUnit.MILLISECONDS) })
                     .observeOn(AndroidSchedulers.mainThread())
                     .subscribe(
                             { ll ->
-                                Timber.d("Moving to Location [%s, %s]", ll[0], ll[1])
-
-                                location = mockLocation(Point.fromLngLat(ll[0], ll[1]))
-                                location?.let { l ->
-                                    for (listener in locationListeners) {
-                                        listener.onLocationChanged(l)
+                                if (tracking) {
+                                    Timber.d("Moving to Location [%s, %s]", ll[0], ll[1])
+                                    location = mockLocation(Point.fromLngLat(ll[0], ll[1]))
+                                    location?.let { l ->
+                                        for (listener in locationListeners) {
+                                            listener.onLocationChanged(l)
+                                        }
                                     }
                                 }
                             },

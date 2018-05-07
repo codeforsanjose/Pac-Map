@@ -100,4 +100,7 @@
         GitHub.</string>
     <string name="github_logo_desc">GitHub logo</string>
     <string name="code_for_san_jose_logo_desc">Code For San Jose logo</string>
+    <string name="foss_license_button_text">view open source licence attribution</string>
+    <string name="navigate_button_text">Navigate to area</string>
+    <string name="navigate_button_route_loading_text">Finding Route&#8230;</string>
 </resources>

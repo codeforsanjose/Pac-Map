@@ -88,6 +88,7 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback, LocationEngineList
     lateinit var settingsFab: FloatingActionButton
     lateinit var showInfoFab: FloatingActionButton
     lateinit var liveModeFab: FloatingActionButton
+    lateinit var demoFab: FloatingActionButton
     lateinit var navigateHereButton: Button
 
     var zones: FeatureCollection? = null
@@ -122,7 +123,17 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback, LocationEngineList
         settingsFab = findViewById(R.id.settingsFab)
         showInfoFab = findViewById(R.id.showInfoFab)
         liveModeFab = findViewById(R.id.liveModeFab)
+        demoFab = findViewById(R.id.demoFab)
         rotateFabsOut()
+
+        if (BuildConfig.DEBUG) {
+            demoFab.visibility = View.VISIBLE
+            demoFab.setOnClickListener { _ ->
+                locationEngine?.let { loc ->
+                    toggleDemoLocationEngine()
+                }
+            }
+        }
 
         menuFab.setOnClickListener { _ ->
             if (menuFabIsOpen) {
@@ -239,41 +250,8 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback, LocationEngineList
 
         // Check if permissions are enabled and if not request
         if (PermissionsManager.areLocationPermissionsGranted(this)) {
+            initRealLocationEngine()
 
-            if (BuildConfig.DEBUG) {
-                Timber.d("Using the debug location engine")
-                locationEngine = DebugLocationEngine()
-                val debugEngine = (locationEngine as DebugLocationEngine)
-
-                val moshi = Moshi.Builder().build()
-                val jsonAdapter = moshi.adapter(LatLngList::class.java)
-                val demoString = rawResourceToString(this, R.raw.demo_trip_1)
-                val lll = jsonAdapter.fromJson(demoString)
-
-                debugEngine.setSource(lll)
-                debugEngine.activate()
-            } else {
-                locationEngine = LocationEngineProvider(this).obtainBestLocationEngineAvailable()
-            }
-
-            locationEngine?.let {
-                it.priority = LocationEnginePriority.HIGH_ACCURACY
-                it.fastestInterval = 1000
-                it.activate()
-                val lastLocation = it.lastLocation
-                if (lastLocation != null) {
-                    originLocation = lastLocation
-                    setCameraPosition(lastLocation)
-                } else {
-                    it.addLocationEngineListener(this)
-                }
-            }
-
-            mapboxMap?.let {
-                val options = LocationLayerOptions.builder(this).build();
-                locationPlugin = LocationLayerPlugin(mapView, it, locationEngine, options);
-                locationPlugin?.cameraMode = CameraMode.TRACKING
-            }
         } else {
             permissionsManager = PermissionsManager(this)
             permissionsManager?.requestLocationPermissions(this)
@@ -281,6 +259,67 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback, LocationEngineList
 
         //updateZones()
         addGeoJsonLayersToMap()
+    }
+
+    @SuppressLint("MissingPermission")
+    private fun initRealLocationEngine() {
+        locationEngine = LocationEngineProvider(this).obtainBestLocationEngineAvailable()
+
+        locationEngine?.let {
+            it.priority = LocationEnginePriority.HIGH_ACCURACY
+            it.fastestInterval = 1000
+            it.activate()
+            val lastLocation = it.lastLocation
+            if (lastLocation != null) {
+                originLocation = lastLocation
+                setCameraPosition(lastLocation)
+            } else {
+                it.addLocationEngineListener(this)
+            }
+        }
+
+        mapboxMap?.let {
+            val options = LocationLayerOptions.builder(this).build();
+            locationPlugin = LocationLayerPlugin(mapView, it, locationEngine, options);
+            locationPlugin?.cameraMode = CameraMode.TRACKING
+        }
+    }
+
+    @SuppressLint("MissingPermission")
+    private fun toggleDemoLocationEngine() {
+        locationEngine?.let { loc ->
+            loc.deactivate()
+            mapboxMap?.removeLayer("mapbox-location-layer")
+            mapboxMap?.removeLayer("mapbox-location-bearing-layer")
+            mapboxMap?.removeLayer("mapbox-location-accuracy-layer")
+            mapboxMap?.removeLayer("mapbox-location-shadow")
+            mapboxMap?.removeLayer("mapbox-location-stroke-layer")
+            mapboxMap?.removeSource("mapbox-location-source")
+            locationPlugin?.setLocationLayerEnabled(false)
+
+            if (locationEngine is DebugLocationEngine) {
+                Timber.d("Stopping the demo")
+                initRealLocationEngine()
+            } else {
+                Timber.d("Starting the location demo")
+                locationEngine = DebugLocationEngine()
+
+                val moshi = Moshi.Builder().build()
+                val jsonAdapter = moshi.adapter(LatLngList::class.java)
+                val demoString = rawResourceToString(this, R.raw.demo_trip_1)
+                val lll = jsonAdapter.fromJson(demoString)
+
+                (locationEngine as DebugLocationEngine).setSource(lll)
+                locationEngine?.activate()
+                locationEngine?.addLocationEngineListener(this)
+
+                mapboxMap?.let {
+                    val options = LocationLayerOptions.builder(this).build();
+                    locationPlugin = LocationLayerPlugin(mapView, it, locationEngine, options);
+                    locationPlugin?.cameraMode = CameraMode.TRACKING
+                }
+            }
+        }
     }
 
     private fun addGeoJsonLayersToMap() {
@@ -334,7 +373,7 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback, LocationEngineList
             getRoute(originPosition, destinationPosition)
             progressBar.visibility = View.VISIBLE
 
-            navigateHereButton.text = "Finding Route..."
+            navigateHereButton.text = getString(R.string.navigate_button_route_loading_text)
             navigateHereButton.isEnabled = false
             navigateHereButton.visibility = View.VISIBLE
             navigateHereButton.setOnClickListener {
@@ -342,7 +381,7 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback, LocationEngineList
 
                 // Pass in your Amazon Polly pool id for speech synthesis using Amazon Polly
                 // Set to null to use the default Android speech synthesizer
-                val awsPoolId: String? = null
+                //val awsPoolId: String? = null
                 val simulateRoute = true
                 val options = NavigationLauncherOptions.builder()
                         .origin(originPosition)
@@ -395,7 +434,7 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback, LocationEngineList
                                 }
                             }
                             navigationMapRoute?.addRoute(currentRoute)
-                            navigateHereButton.text = "Navigate to area"
+                            navigateHereButton.text = getString(R.string.navigate_button_text)
                             navigateHereButton.isEnabled = true
                             progressBar.visibility = View.GONE
                         }
@@ -515,7 +554,7 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback, LocationEngineList
 
     private fun setCameraPosition(location: Location) {
         mapboxMap?.animateCamera(CameraUpdateFactory.newLatLngZoom(
-                LatLng(location.latitude, location.longitude), 16.0))
+                LatLng(location.latitude, location.longitude), 15.0), 50)
     }
 
     override fun onLocationChanged(location: Location?) {

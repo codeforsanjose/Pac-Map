@@ -14,7 +14,9 @@ import android.view.LayoutInflater
 import android.view.MenuItem
 import android.view.View
 import android.view.ViewGroup
+import android.widget.Button
 import android.widget.ImageView
+import com.google.android.gms.oss.licenses.OssLicensesMenuActivity
 import timber.log.Timber
 
 
@@ -153,11 +155,13 @@ class SettingsActivity : AppCompatPreferenceActivity() {
     class AboutFragment : Fragment() {
         lateinit var cfsjImage: ImageView
         lateinit var ghImage: ImageView
+        lateinit var fossButton : Button
 
         override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
             val view = inflater.inflate(R.layout.about_fragment, container, false)
             cfsjImage = view.findViewById(R.id.cfsjImageView)
             ghImage = view.findViewById(R.id.ghImageView)
+            fossButton = view.findViewById(R.id.fossButton)
 
             cfsjImage.setOnClickListener {
                 Timber.d("CFSJ Image was clicked")
@@ -165,6 +169,11 @@ class SettingsActivity : AppCompatPreferenceActivity() {
 
             ghImage.setOnClickListener {
                 Timber.d("GitHub Image was clicked")
+            }
+
+            fossButton.setOnClickListener {
+                Timber.d("FOSS Button was clicked")
+                startActivity(Intent(activity, OssLicensesMenuActivity::class.java))
             }
 
             return view
