@@ -1,5 +1,9 @@
 # Pac-Map
 
+<p align="center">
+![Pac-Map icon](https://raw.githubusercontent.com/codeforsanjose/Pac-Map/master/app/src/main/res/mipmap-xxxhdpi/ic_launcher.png)
+<p>
+
 There are roads in [Mapillary](https://www.mapillary.com/) that are missing crowd-sourced image data. Contributors of
 Mapillary need directions to drive through these roads and quickly identify unmapped roads.
 
