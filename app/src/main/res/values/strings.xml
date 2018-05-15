@@ -1,7 +1,17 @@
 <resources>
     <string name="app_name">Pac-Map</string>
     <string name="user_location_permission_not_granted">Permissions not granted!</string>
-    <string name="access_token">pk.eyJ1Ijoia2ZhbGNvbmVyIiwiYSI6ImNqZHplaWo3dTAxcHMyd3F0ZTAzdDI5b3cifQ.8_95Wz1ktmePGxUkSCNjog</string>
+
+    <string name="mapbox_access_token">pk.eyJ1Ijoia2ZhbGNvbmVyIiwiYSI6ImNqZHplaWo3dTAxcHMyd3F0ZTAzdDI5b3cifQ.8_95Wz1ktmePGxUkSCNjog</string>
+
+    <!--
+    Alternate styles:
+    mapbox://styles/mapbox/streets-v10
+    mapbox://styles/kfalconer/cjgx2mj6n00022snzrtdyk1wp
+    mapbox://styles/kfalconer/cjgx23yvq00062rqzj92ar62y
+    -->
+    <string name="mapbox_style_url">mapbox://styles/mapbox/streets-v10</string>
+
     <string name="download_button_text">Download</string>
     <string name="list_button_text">List</string>
 
@@ -103,4 +113,8 @@
     <string name="foss_license_button_text">view open source licence attribution</string>
     <string name="navigate_button_text">Navigate to area</string>
     <string name="navigate_button_route_loading_text">Finding Route&#8230;</string>
+    <string name="demo_button_text">Demo</string>
+    <string name="start_navigation_button_text">Start Navigation</string>
+    <string name="information_button_text">Information</string>
+
 </resources>

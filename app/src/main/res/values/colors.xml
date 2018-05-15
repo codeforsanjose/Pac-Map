@@ -61,4 +61,8 @@
     <color name="black_semi_transparent">#B2000000</color>
     <color name="half_black">#808080</color>
     <color name="white_pressed">#f1f1f1</color>
+
+    <color name="geojson_zone_fill">#990000ff</color>
+    <color name="geojson_zone_outline">#99ff0000</color>
+    <color name="driving_line">#098e17</color>
 </resources>

@@ -53,7 +53,7 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:clickable="true"
-        android:contentDescription="Information"
+        android:contentDescription="@string/information_button_text"
         android:focusable="true"
         app:layout_constraintCircle="@+id/menuFab"
         app:layout_constraintCircleAngle="180"
@@ -70,7 +70,7 @@
         android:layout_marginBottom="16dp"
         android:layout_marginEnd="16dp"
         android:clickable="true"
-        android:contentDescription="Demo"
+        android:contentDescription="@string/demo_button_text"
         android:focusable="true"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
@@ -84,7 +84,7 @@
         android:layout_alignParentBottom="true"
         android:layout_centerHorizontal="true"
         android:layout_marginBottom="24dp"
-        android:text="Start Navigation"
+        android:text="@string/start_navigation_button_text"
         android:visibility="gone"
         app:layout_constraintBottom_toBottomOf="@+id/mapView"
         app:layout_constraintEnd_toEndOf="parent"
@@ -111,9 +111,8 @@
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent"
-        mapbox:mapbox_cameraTargetLat="40.73581"
-        mapbox:mapbox_cameraTargetLng="-73.99155"
-        mapbox:mapbox_cameraZoom="11"
-        mapbox:mapbox_styleUrl="mapbox://styles/mapbox/streets-v10"/>
+        mapbox:mapbox_cameraTargetLat="37.3382"
+        mapbox:mapbox_cameraTargetLng="121.8863"
+        mapbox:mapbox_cameraZoom="12"/>
 
 </android.support.constraint.ConstraintLayout>

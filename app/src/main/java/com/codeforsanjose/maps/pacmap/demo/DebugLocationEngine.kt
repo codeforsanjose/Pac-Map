@@ -28,12 +28,12 @@ class DebugLocationEngine() :
             Observable.fromArray(it.coordinates)
                     .subscribeOn(Schedulers.io())
                     .concatMapIterable({ coords -> coords.asIterable() })
-                    .concatMap({ i -> Observable.just(i).delay(700, TimeUnit.MILLISECONDS) })
+                    .concatMap({ i -> Observable.just(i).delay(500, TimeUnit.MILLISECONDS) })
                     .observeOn(AndroidSchedulers.mainThread())
                     .subscribe(
                             { ll ->
                                 if (tracking) {
-                                    Timber.d("Moving to Location [%s, %s]", ll[0], ll[1])
+                                    Timber.v("Moving to Location [%s, %s]", ll[0], ll[1])
                                     location = mockLocation(Point.fromLngLat(ll[0], ll[1]))
                                     location?.let { l ->
                                         for (listener in locationListeners) {

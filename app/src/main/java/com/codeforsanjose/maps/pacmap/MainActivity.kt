@@ -9,6 +9,7 @@ import android.graphics.RectF
 import android.location.Location
 import android.os.Bundle
 import android.support.design.widget.FloatingActionButton
+import android.support.v4.content.ContextCompat
 import android.support.v7.app.AppCompatActivity
 import android.view.View
 import android.view.Window
@@ -18,7 +19,6 @@ import android.widget.Toast
 import com.codeforsanjose.maps.pacmap.core.StreamUtils.Companion.rawResourceToString
 import com.codeforsanjose.maps.pacmap.demo.DebugLocationEngine
 import com.codeforsanjose.maps.pacmap.demo.LatLngList
-import com.codeforsanjose.maps.pacmap.zone.FeatureCollection
 import com.codeforsanjose.maps.pacmap.zone.ZoneManager.Companion.fetchZones
 import com.google.android.gms.oss.licenses.OssLicensesMenuActivity
 import com.mapbox.android.core.location.LocationEngine
@@ -30,12 +30,12 @@ import com.mapbox.android.core.permissions.PermissionsManager
 import com.mapbox.api.directions.v5.models.DirectionsResponse
 import com.mapbox.api.directions.v5.models.DirectionsRoute
 import com.mapbox.geojson.Feature
+import com.mapbox.geojson.LineString
 import com.mapbox.geojson.Point
 import com.mapbox.geojson.Polygon
 import com.mapbox.mapboxsdk.Mapbox
 import com.mapbox.mapboxsdk.annotations.PolygonOptions
-import com.mapbox.mapboxsdk.annotations.Polyline
-import com.mapbox.mapboxsdk.annotations.PolylineOptions
+import com.mapbox.mapboxsdk.camera.CameraPosition
 import com.mapbox.mapboxsdk.camera.CameraUpdateFactory
 import com.mapbox.mapboxsdk.constants.Style.MAPBOX_STREETS
 import com.mapbox.mapboxsdk.geometry.LatLng
@@ -67,13 +67,15 @@ import java.net.URL
 
 
 class MainActivity : AppCompatActivity(), OnMapReadyCallback, LocationEngineListener, OnMapClickListener,
-        PermissionsListener {
+        PermissionsListener, MapboxMap.OnCameraChangeListener {
 
 
     companion object {
         const val GEO_SOURCE_ID = "Source_1"
+        const val DRIVING_LINE_SOURCE_ID = "driving_line_source"
         const val GEO_FILL_LAYER_ID = "FillLayer1"
         const val GEO_LINE_LAYER_ID = "LineLayer1"
+        const val DRIVING_LINE_LAYER_ID = "DrivingLineLayer1"
     }
 
     var permissionsManager: PermissionsManager? = null
@@ -84,7 +86,8 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback, LocationEngineList
     var currentRoute: DirectionsRoute? = null
     var navigationMapRoute: NavigationMapRoute? = null
 
-    var previousLocations : ArrayList<LatLng> = arrayListOf()
+    var previousLocations: ArrayList<Point> = arrayListOf()
+    var currentZoomLevel: Double = 50.0
 
     var menuFabIsOpen = false
     lateinit var progressBar: ProgressBar
@@ -95,7 +98,7 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback, LocationEngineList
     lateinit var demoFab: FloatingActionButton
     lateinit var navigateHereButton: Button
 
-    var zones: FeatureCollection? = null
+    var zones: com.codeforsanjose.maps.pacmap.zone.FeatureCollection? = null
     val polygonList = ArrayList<ArrayList<LatLng>>()
 
     lateinit var mapView: MapView
@@ -104,7 +107,7 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback, LocationEngineList
         super.onCreate(savedInstanceState)
         window.requestFeature(Window.FEATURE_ACTION_BAR)
         supportActionBar?.hide()
-        Mapbox.getInstance(this, getString(R.string.access_token))
+        Mapbox.getInstance(this, getString(R.string.mapbox_access_token))
 
         setContentView(R.layout.activity_main)
 
@@ -246,9 +249,11 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback, LocationEngineList
         if (map != null) {
             Timber.d("Map is ready")
             mapboxMap = map
+            // mapboxMap?.setStyleUrl(getString(R.string.mapbox_style_url))
             mapboxMap?.let {
                 it.addOnMapClickListener(this)
                 it.addSource(GeoJsonSource(GEO_SOURCE_ID, URL("https://pac-map.herokuapp.com/geo/")))
+                //it.setOnCameraChangeListener(this)
             }
         }
 
@@ -276,15 +281,15 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback, LocationEngineList
             val lastLocation = it.lastLocation
             if (lastLocation != null) {
                 originLocation = lastLocation
-                setCameraPosition(lastLocation)
+                setCameraPosition(LatLng(lastLocation.latitude, lastLocation.longitude))
             } else {
                 it.addLocationEngineListener(this)
             }
         }
 
         mapboxMap?.let {
-            val options = LocationLayerOptions.builder(this).build();
-            locationPlugin = LocationLayerPlugin(mapView, it, locationEngine, options);
+            val options = LocationLayerOptions.builder(this).build()
+            locationPlugin = LocationLayerPlugin(mapView, it, locationEngine, options)
             locationPlugin?.cameraMode = CameraMode.TRACKING
         }
     }
@@ -293,12 +298,12 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback, LocationEngineList
     private fun toggleDemoLocationEngine() {
         locationEngine?.let { loc ->
             loc.deactivate()
-            mapboxMap?.removeLayer("mapbox-location-layer")
-            mapboxMap?.removeLayer("mapbox-location-bearing-layer")
-            mapboxMap?.removeLayer("mapbox-location-accuracy-layer")
-            mapboxMap?.removeLayer("mapbox-location-shadow")
-            mapboxMap?.removeLayer("mapbox-location-stroke-layer")
-            mapboxMap?.removeSource("mapbox-location-source")
+//            mapboxMap?.removeLayer("mapbox-location-layer")
+//            mapboxMap?.removeLayer("mapbox-location-bearing-layer")
+//            mapboxMap?.removeLayer("mapbox-location-accuracy-layer")
+//            mapboxMap?.removeLayer("mapbox-location-shadow")
+//            mapboxMap?.removeLayer("mapbox-location-stroke-layer")
+//            mapboxMap?.removeSource("mapbox-location-source")
             locationPlugin?.setLocationLayerEnabled(false)
 
             if (locationEngine is DebugLocationEngine) {
@@ -331,25 +336,24 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback, LocationEngineList
         val fillLayer = FillLayer(GEO_FILL_LAYER_ID, GEO_SOURCE_ID)
         fillLayer.setProperties(
                 visibility(VISIBLE),
-                fillColor(Color.parseColor("#0000ff")),
-                fillOutlineColor(Color.parseColor("#000000ff")),
-                fillOpacity(0.25f))
+                fillColor(ContextCompat.getColor(this, R.color.geojson_zone_fill)),
+                fillOpacity(0.23f))
         mapboxMap?.addLayer(fillLayer)
 
         // Draw the polygon outlines
         val lineLayer = LineLayer(GEO_LINE_LAYER_ID, GEO_SOURCE_ID)
         lineLayer.setProperties(
                 visibility(VISIBLE),
-                lineWidth(2f),
-                lineOpacity(0.4f),
-                lineColor(Color.parseColor("#ff0000")))
-        mapboxMap?.addLayer(lineLayer)
+                lineWidth(3f),
+                lineOpacity(0.7f),
+                lineColor(ContextCompat.getColor(this, R.color.geojson_zone_outline)))
+        mapboxMap?.addLayerAbove(lineLayer, GEO_FILL_LAYER_ID)
     }
 
-    override fun onMapClick(point: LatLng) {
-        Timber.v("Map was touched at point lat: %s,  lon: %s", point.latitude, point.longitude)
+    override fun onMapClick(latLng: LatLng) {
+        Timber.v("Map was touched at point lat: %s,  lon: %s", latLng.latitude, latLng.longitude)
         mapboxMap?.let { map ->
-            val pointf = map.projection.toScreenLocation(point)
+            val pointf = map.projection.toScreenLocation(latLng)
             val rectF = RectF(pointf.x - 10, pointf.y - 10, pointf.x + 10, pointf.y + 10)
 
             val featureList = map.queryRenderedFeatures(rectF, GEO_FILL_LAYER_ID) as List<Feature>
@@ -386,7 +390,7 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback, LocationEngineList
                 // Pass in your Amazon Polly pool id for speech synthesis using Amazon Polly
                 // Set to null to use the default Android speech synthesizer
                 //val awsPoolId: String? = null
-                val simulateRoute = true
+                val simulateRoute = false
                 val options = NavigationLauncherOptions.builder()
                         .origin(originPosition)
                         .destination(destinationPosition)
@@ -556,30 +560,58 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback, LocationEngineList
         mapView.onSaveInstanceState(outState!!)
     }
 
-    private fun setCameraPosition(location: Location) {
-        mapboxMap?.animateCamera(CameraUpdateFactory.newLatLngZoom(
-                LatLng(location.latitude, location.longitude), 15.0), 50)
+    private fun setCameraPosition(latLng: LatLng, zoom: Double? = null) {
+        if (zoom != null) {
+            mapboxMap?.animateCamera(CameraUpdateFactory.newLatLngZoom(latLng, zoom), 50)
+        } else {
+            mapboxMap?.animateCamera(CameraUpdateFactory.newLatLng(latLng), 50)
+        }
+    }
+
+    override fun onCameraChange(cameraPosition: CameraPosition) {
+        Timber.d("New camera position: lat: %s, lng:%s, zoom: %s",
+                cameraPosition.target.latitude, cameraPosition.target.longitude, cameraPosition.zoom)
     }
 
     override fun onLocationChanged(location: Location?) {
         location?.let {
             originLocation = it
-            updateDrivingLine( LatLng(it.latitude, it.longitude))
-            setCameraPosition(it)
+            updateDrivingLine(Point.fromLngLat(it.longitude, it.latitude))
+            setCameraPosition(LatLng(it.latitude, it.longitude))
         }
     }
 
-    private fun updateDrivingLine(ll : LatLng){
-        previousLocations.add(ll)
-        if (previousLocations.isEmpty()){
+    private fun updateDrivingLine(point: Point) {
+        previousLocations.add(point)
+
+        if (previousLocations.isEmpty()) {
             Timber.d("Empty locations list")
             return
         }
-        mapboxMap?.addPolyline(PolylineOptions()
-                .addAll(previousLocations)
-                .color(Color.parseColor("#098e17"))
-                .alpha(1f)
-                .width(5f))
+
+        val lineString = LineString.fromLngLats(previousLocations)
+
+        Timber.d("LineString:\n%s", lineString.toJson())
+
+        val drivingSource = mapboxMap?.getSourceAs<GeoJsonSource>(DRIVING_LINE_SOURCE_ID)
+        if (drivingSource == null) {
+            mapboxMap?.addSource(GeoJsonSource(DRIVING_LINE_SOURCE_ID, lineString))
+        } else {
+            drivingSource.setGeoJson(lineString)
+        }
+
+
+        if (mapboxMap?.getLayer(DRIVING_LINE_LAYER_ID) == null) {
+            // Draw the driving line
+            val lineLayer = LineLayer(DRIVING_LINE_LAYER_ID, DRIVING_LINE_SOURCE_ID)
+            lineLayer.setProperties(
+                    visibility(VISIBLE),
+                    lineWidth(5f),
+                    lineOpacity(1.0f),
+                    lineColor(ContextCompat.getColor(this, R.color.driving_line)))
+            mapboxMap?.addLayerAbove(lineLayer, GEO_LINE_LAYER_ID)
+        }
+
     }
 
     @SuppressLint("MissingPermission")
@@ -593,11 +625,11 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback, LocationEngineList
 
     override fun onPermissionResult(granted: Boolean) {
         if (granted) {
-            onMapReady(null);
+            onMapReady(null)
         } else {
-            Toast.makeText(this, R.string.user_location_permission_not_granted, Toast.LENGTH_LONG).show();
+            Toast.makeText(this, R.string.user_location_permission_not_granted, Toast.LENGTH_LONG).show()
             Timber.e("permissions not granted")
-            finish();
+            finish()
         }
     }
 }

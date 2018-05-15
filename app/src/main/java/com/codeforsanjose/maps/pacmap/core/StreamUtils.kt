@@ -31,7 +31,7 @@ class StreamUtils {
                 inputString.close()
                 String(buffer, StandardCharsets.UTF_8)
             } catch (exception: Exception) {
-                Log.e("Exception Loading file from Assets: %s", exception.toString())
+                Timber.e("Exception Loading file from Assets: %s", exception.toString())
                 exception.printStackTrace()
                 null
             }
